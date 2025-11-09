@@ -1,0 +1,22 @@
+# Bun configuration file
+# See: https://bun.sh/docs/runtime/bunfig
+
+[test]
+# Test configuration
+preload = ["./src/utils/schemas.ts"]
+coverage = true
+
+[install]
+# Package manager configuration
+# Use exact versions for reproducibility
+exact = true
+
+# Cache configuration
+cache = true
+
+[run]
+# Automatically install dependencies
+auto-install = true
+
+# Shell interpreter (only 'bun' and 'system' are supported)
+shell = "system"
