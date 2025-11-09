@@ -1,15 +1,6 @@
-/**
- * Cloudflare Workers entrypoint for Traktamente MCP Server
- * This provides a global edge deployment of the MCP server
- */
-
-import { fetchTraktamente } from "@/utils/api";
+import type { Env } from "bun";
 import { MCP_TOOLS } from "@/core/mcp-tools";
-
-export interface Env {
-	// Environment variables can be added here
-	// Example: API_KEY?: string;
-}
+import { fetchTraktamente } from "@/utils/api";
 
 interface MCPRequest {
 	jsonrpc: "2.0";
@@ -241,11 +232,7 @@ async function handleMCPRequest(
  * Cloudflare Workers fetch handler
  */
 export default {
-	async fetch(
-		request: Request,
-		env: Env,
-		ctx: ExecutionContext,
-	): Promise<Response> {
+	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
 
 		// CORS headers
