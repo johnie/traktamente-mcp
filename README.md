@@ -48,6 +48,31 @@ Restart Claude Desktop, and you'll have access to three new tools:
 - **get_all_countries** - List all available countries
 - **search_traktamente** - Search for countries using regex patterns
 
+### With Streamable HTTP (Remote Server)
+
+The server is available as a hosted service at `https://traktamente.app/mcp`, which you can connect to without installing anything locally.
+
+#### Claude Code
+
+The easiest way to add the server to Claude Code is using the CLI:
+
+```bash
+claude mcp add --transport http traktamente https://traktamente.app/mcp
+```
+
+Alternatively, you can manually add it to your Claude Code settings (`~/.config/claude/config.json` or via UI settings):
+
+```json
+{
+  "mcpServers": {
+    "traktamente": {
+      "transport": "http",
+      "url": "https://traktamente.app/mcp"
+    }
+  }
+}
+```
+
 ### Standalone Usage
 
 ```bash
