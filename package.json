@@ -1,0 +1,67 @@
+{
+    "name": "traktamente-mcp",
+    "version": "1.0.0",
+    "description": "MCP server for Swedish traktamente (per diem) rates from Skatteverket",
+    "type": "module",
+    "private": false,
+    "main": "dist/index.js",
+    "bin": {
+        "traktamente-mcp": "dist/index.js"
+    },
+    "files": [
+        "dist/",
+        "src/",
+        "README.md",
+        "LICENSE"
+    ],
+    "keywords": [
+        "mcp",
+        "model-context-protocol",
+        "traktamente",
+        "per-diem",
+        "skatteverket",
+        "sweden",
+        "travel-expenses"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/johnie/traktamente-mcp.git"
+    },
+    "bugs": {
+        "url": "https://github.com/johnie/traktamente-mcp/issues"
+    },
+    "homepage": "https://github.com/johnie/traktamente-mcp#readme",
+    "author": "Johnie Hjelm <johnie@hjelm.im>",
+    "license": "MIT",
+    "engines": {
+        "node": ">=24.0.0"
+    },
+    "scripts": {
+        "start": "bun src/index.ts",
+        "start:http": "TRANSPORT=http bun src/index.ts",
+        "dev": "bun --watch src/index.ts",
+        "dev:hot": "bun --hot src/index.ts",
+        "build": "bun build src/index.ts --outdir=dist --target=bun --minify --sourcemap --external @modelcontextprotocol/sdk",
+        "prepublishOnly": "bun run build",
+        "test": "bun test",
+        "test:watch": "bun test --watch",
+        "inspector": "bunx @modelcontextprotocol/inspector bun src/index.ts",
+        "docker:build": "docker build -t traktamente-mcp .",
+        "docker:run": "docker run -i traktamente-mcp",
+        "lint": "biome check .",
+        "lint:fix": "biome check --write .",
+        "format": "biome format --write ."
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.21.1",
+        "zod": "^4.1.12"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.3.4",
+        "@modelcontextprotocol/inspector": "^0.17.2",
+        "@types/bun": "latest"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    }
+}
