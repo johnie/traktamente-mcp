@@ -1,0 +1,11 @@
+services:
+  # Stdio transport server (for local Docker-based stdio integration)
+  traktamente:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: traktamente-mcp
+    environment:
+      - TRANSPORT=stdio
+    stdin_open: true
+    tty: false
