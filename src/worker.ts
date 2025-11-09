@@ -1,4 +1,3 @@
-import type { Env } from "bun";
 import { MCP_TOOLS } from "@/core/mcp-tools";
 import { fetchTraktamente } from "@/utils/api";
 
@@ -26,10 +25,7 @@ interface MCPResponse {
 /**
  * Handle MCP protocol requests
  */
-async function handleMCPRequest(
-	request: MCPRequest,
-	env: Env,
-): Promise<MCPResponse> {
+async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
 	const { id, method, params } = request;
 
 	try {
@@ -232,7 +228,7 @@ async function handleMCPRequest(
  * Cloudflare Workers fetch handler
  */
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 
 		// CORS headers
@@ -280,7 +276,7 @@ export default {
 					);
 				}
 
-				const response = await handleMCPRequest(body, env);
+				const response = await handleMCPRequest(body);
 
 				return Response.json(response, {
 					headers: { ...corsHeaders, "Content-Type": "application/json" },
