@@ -1,5 +1,6 @@
 import { MCP_TOOLS } from "@/core/mcp-tools";
-import { fetchTraktamente } from "@/utils/api";
+import { api } from "@/lib/api";
+import type { TraktamenteQueryParams } from "@/utils/schemas";
 
 interface MCPRequest {
 	jsonrpc: "2.0";
@@ -57,16 +58,9 @@ async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
 
 			// Handle get_traktamente tool
 			if (name === "get_traktamente") {
-				const queryParams = args as {
-					land?: string;
-					år?: string;
-					landskod?: string;
-					normalbelopp?: string;
-					limit?: number;
-					offset?: number;
-				};
+				const searchParams = args as TraktamenteQueryParams;
 
-				const data = await fetchTraktamente(queryParams);
+				const data = await api({ searchParams });
 
 				return {
 					jsonrpc: "2.0",
@@ -75,17 +69,7 @@ async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
 						content: [
 							{
 								type: "text",
-								text: JSON.stringify(
-									{
-										resultCount: data.resultCount,
-										offset: data.offset,
-										limit: data.limit,
-										results: data.results,
-										hasMore: !!data.next,
-									},
-									null,
-									2,
-								),
+								text: JSON.stringify(data, null, 2),
 							},
 						],
 					},
@@ -94,14 +78,13 @@ async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
 
 			// Handle get_all_countries tool
 			if (name === "get_all_countries") {
-				const queryParams = args as {
-					år?: string;
-					limit?: number;
-				};
+				const queryParams = args as TraktamenteQueryParams;
 
-				const data = await fetchTraktamente({
-					år: queryParams.år,
-					limit: queryParams.limit || 200,
+				const data = await api({
+					searchParams: {
+						år: queryParams.år,
+						_limit: queryParams._limit || 200,
+					},
 				});
 
 				return {
@@ -111,15 +94,7 @@ async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
 						content: [
 							{
 								type: "text",
-								text: JSON.stringify(
-									{
-										resultCount: data.resultCount,
-										results: data.results,
-										hasMore: !!data.next,
-									},
-									null,
-									2,
-								),
+								text: JSON.stringify(data, null, 2),
 							},
 						],
 					},
@@ -145,10 +120,12 @@ async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
 					};
 				}
 
-				const data = await fetchTraktamente({
-					land: queryParams.search,
-					år: queryParams.år,
-					limit: queryParams.limit || 50,
+				const data = await api({
+					searchParams: {
+						"land eller område": queryParams.search,
+						år: queryParams.år,
+						_limit: queryParams.limit || 50,
+					},
 				});
 
 				return {
@@ -158,14 +135,7 @@ async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
 						content: [
 							{
 								type: "text",
-								text: JSON.stringify(
-									{
-										resultCount: data.resultCount,
-										results: data.results,
-									},
-									null,
-									2,
-								),
+								text: JSON.stringify(data, null, 2),
 							},
 						],
 					},
