@@ -3,7 +3,7 @@ import {
 	CallToolRequestSchema,
 	ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { fetchTraktamente } from "@/utils/api";
+import { api } from "@/lib/api";
 
 // Create and configure the MCP server
 export function createServer() {
@@ -126,23 +126,13 @@ export function createServer() {
 					offset?: number;
 				};
 
-				const data = await fetchTraktamente(params);
+				const data = await api({ searchParams: params });
 
 				return {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify(
-								{
-									resultCount: data.resultCount,
-									offset: data.offset,
-									limit: data.limit,
-									results: data.results,
-									hasMore: !!data.next,
-								},
-								null,
-								2,
-							),
+							text: JSON.stringify(data, null, 2),
 						},
 					],
 				};
@@ -152,24 +142,18 @@ export function createServer() {
 					limit?: number;
 				};
 
-				const data = await fetchTraktamente({
-					år: params.år,
-					limit: params.limit || 200,
+				const data = await api({
+					searchParams: {
+						år: params.år,
+						_limit: params.limit || 200,
+					},
 				});
 
 				return {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify(
-								{
-									resultCount: data.resultCount,
-									results: data.results,
-									hasMore: !!data.next,
-								},
-								null,
-								2,
-							),
+							text: JSON.stringify(data, null, 2),
 						},
 					],
 				};
@@ -180,24 +164,19 @@ export function createServer() {
 					limit?: number;
 				};
 
-				const data = await fetchTraktamente({
-					land: params.search,
-					år: params.år,
-					limit: params.limit || 50,
+				const data = await api({
+					searchParams: {
+						"land eller område": params.search,
+						år: params.år,
+						_limit: params.limit || 50,
+					},
 				});
 
 				return {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify(
-								{
-									resultCount: data.resultCount,
-									results: data.results,
-								},
-								null,
-								2,
-							),
+							text: JSON.stringify(data, null, 2),
 						},
 					],
 				};
