@@ -109,14 +109,30 @@ export function createServer() {
 				},
 			});
 
+			// Transform API response to match output schema
+			const resultCount = data.results.length;
+			const actualLimit = data.limit || limit || 100;
+			const actualOffset = data.offset || offset || 0;
+			const hasMore = data.total
+				? actualOffset + resultCount < data.total
+				: resultCount === actualLimit;
+
+			const response = {
+				resultCount,
+				offset: actualOffset,
+				limit: actualLimit,
+				results: data.results,
+				hasMore,
+			};
+
 			return {
 				content: [
 					{
 						type: "text",
-						text: JSON.stringify(data, null, 2),
+						text: JSON.stringify(response, null, 2),
 					},
 				],
-				structuredContent: data,
+				structuredContent: response,
 			};
 		},
 	);
@@ -139,14 +155,27 @@ export function createServer() {
 				},
 			});
 
+			// Transform API response to match output schema
+			const resultCount = data.results.length;
+			const actualLimit = data.limit || limit || 200;
+			const hasMore = data.total
+				? (data.offset || 0) + resultCount < data.total
+				: resultCount === actualLimit;
+
+			const response = {
+				resultCount,
+				results: data.results,
+				hasMore,
+			};
+
 			return {
 				content: [
 					{
 						type: "text",
-						text: JSON.stringify(data, null, 2),
+						text: JSON.stringify(response, null, 2),
 					},
 				],
-				structuredContent: data,
+				structuredContent: response,
 			};
 		},
 	);
@@ -170,14 +199,20 @@ export function createServer() {
 				},
 			});
 
+			// Transform API response to match output schema
+			const response = {
+				resultCount: data.results.length,
+				results: data.results,
+			};
+
 			return {
 				content: [
 					{
 						type: "text",
-						text: JSON.stringify(data, null, 2),
+						text: JSON.stringify(response, null, 2),
 					},
 				],
-				structuredContent: data,
+				structuredContent: response,
 			};
 		},
 	);
