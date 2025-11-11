@@ -10,12 +10,7 @@ import { MCPRequestSchema } from "@/utils/http-schemas";
 /**
  * Create a configured Hono app with MCP endpoints
  */
-export function createHonoApp(
-	mcpServer: McpServer,
-	options: {
-		includeRuntime?: boolean;
-	} = {},
-) {
+export function createHonoApp(mcpServer: McpServer) {
 	const app = new Hono();
 
 	// Middleware
@@ -42,11 +37,6 @@ export function createHonoApp(
 			repository: "https://github.com/johnie/traktamente-mcp",
 		};
 
-		// Optionally include runtime info (e.g., for Cloudflare Workers)
-		if (options.includeRuntime) {
-			info.runtime = "Cloudflare Workers";
-		}
-
 		return c.json(info);
 	});
 
@@ -55,11 +45,6 @@ export function createHonoApp(
 		const health: Record<string, unknown> = {
 			status: "ok",
 		};
-
-		// Add timestamp for non-Bun environments (e.g., Cloudflare Workers)
-		if (options.includeRuntime) {
-			health.timestamp = new Date().toISOString();
-		}
 
 		return c.json(health);
 	});
