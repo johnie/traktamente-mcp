@@ -1,8 +1,8 @@
 import got from "got";
 import { SKATTEVERKET_API_URL } from "@/constants";
-import type {
-	TraktamenteQueryParams,
-	TraktamenteResponse,
+import {
+	type TraktamenteQueryParams,
+	TraktamenteResponseSchema,
 } from "@/utils/schemas";
 
 export const api = async ({
@@ -10,7 +10,7 @@ export const api = async ({
 }: {
 	searchParams?: TraktamenteQueryParams;
 } = {}) => {
-	return got
+	const response = await got
 		.get(SKATTEVERKET_API_URL, {
 			searchParams,
 			responseType: "json",
@@ -27,5 +27,8 @@ export const api = async ({
 				accept: "application/json",
 			},
 		})
-		.json<TraktamenteResponse>();
+		.json();
+
+	// Validate response with Zod schema
+	return TraktamenteResponseSchema.parse(response);
 };
