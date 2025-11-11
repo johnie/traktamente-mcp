@@ -34,7 +34,7 @@
 	"author": "Johnie Hjelm <johnie@hjelm.im>",
 	"license": "MIT",
 	"engines": {
-		"node": ">=24.0.0"
+		"bun": ">=1.0.0"
 	},
 	"scripts": {
 		"start": "bun src/index.ts",
@@ -69,6 +69,7 @@
 		"@cloudflare/workers-types": "^4.20251109.0",
 		"@modelcontextprotocol/inspector": "^0.17.2",
 		"@types/bun": "latest",
+		"typescript": "^5.0.0",
 		"wrangler": "^4.46.0"
 	},
 	"peerDependencies": {
