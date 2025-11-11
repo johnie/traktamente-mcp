@@ -44,6 +44,11 @@ bun test:watch
 # Lint and format code
 bun run lint
 bun run format
+
+# Cloudflare Workers deployment
+bun run workers:dev      # Local development with wrangler
+bun run workers:deploy   # Deploy to Cloudflare Workers
+bun run workers:tail     # View live logs
 ```
 
 ## Architecture
@@ -55,13 +60,17 @@ The codebase is organized into separate modules for maintainability:
 src/
 ├── index.ts              # Entry point - transport selection
 ├── server.ts             # Core MCP server setup and tool definitions
+├── worker.ts             # Cloudflare Workers entry point
+├── constants.ts          # Constants (API URL)
+├── lib/
+│   ├── api.ts            # Skatteverket API client
+│   └── api.test.ts       # API tests
 ├── transports/
 │   ├── stdio.ts          # Stdio transport (default)
 │   └── http.ts           # HTTP transport (alternative)
 └── utils/
-    ├── api.ts            # Skatteverket API client
-    ├── api.test.ts       # API tests
-    └── schemas.ts        # Zod schemas for validation
+    ├── schemas.ts        # Zod schemas for API validation
+    └── http-schemas.ts   # Zod schemas for HTTP/MCP requests
 ```
 
 ### Key Components
@@ -77,15 +86,20 @@ src/
    - Tool definitions with input schemas
    - Error handling and response formatting
 
-3. **API Client** (`src/utils/api.ts`):
-   - `fetchTraktamente()` function for Skatteverket API
-   - Uses Bun's native fetch for performance
-   - Zod validation of API responses
-   - Query parameter building with URLSearchParams
+3. **API Client** (`src/lib/api.ts`):
+   - `api()` function for Skatteverket API
+   - Uses `got` HTTP client with retry and timeout logic
+   - Zod validation of API responses (via schemas)
+   - Query parameter building with search params
 
 4. **Transports**:
    - `stdio.ts`: Standard I/O for Claude Desktop
-   - `http.ts`: HTTP server for web-based clients
+   - `http.ts`: HTTP server for web-based clients using Hono framework
+
+5. **Workers Entry** (`src/worker.ts`):
+   - Cloudflare Workers deployment entry point
+   - Uses Hono framework with `@hono/mcp` StreamableHTTPTransport
+   - Includes health check and MCP endpoints
 
 ### Key Technical Details
 
