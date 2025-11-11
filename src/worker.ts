@@ -3,7 +3,7 @@ import { createHonoApp } from "@/utils/hono-app";
 
 // Create MCP server instance and Hono app
 const mcpServer = createServer();
-const app = createHonoApp(mcpServer, { includeRuntime: true });
+const app = createHonoApp(mcpServer);
 
 /**
  * Cloudflare Workers fetch handler
