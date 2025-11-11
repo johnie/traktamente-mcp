@@ -28,9 +28,7 @@ async function fetchWithRetry(
 		const retryableStatusCodes = [408, 413, 429, 500, 502, 503, 504];
 		if (retryableStatusCodes.includes(response.status) && retries > 0) {
 			// Wait before retrying (exponential backoff)
-			await new Promise((resolve) =>
-				setTimeout(resolve, (3 - retries) * 1000),
-			);
+			await new Promise((resolve) => setTimeout(resolve, (3 - retries) * 1000));
 			return fetchWithRetry(url, options, retries - 1, timeout);
 		}
 
@@ -45,9 +43,7 @@ async function fetchWithRetry(
 		// Retry on network errors if retries remaining
 		if (retries > 0 && error instanceof Error) {
 			// Wait before retrying (exponential backoff)
-			await new Promise((resolve) =>
-				setTimeout(resolve, (3 - retries) * 1000),
-			);
+			await new Promise((resolve) => setTimeout(resolve, (3 - retries) * 1000));
 			return fetchWithRetry(url, options, retries - 1, timeout);
 		}
 

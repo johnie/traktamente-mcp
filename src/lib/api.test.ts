@@ -48,7 +48,8 @@ describe("api", () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+			json: () =>
+				Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 		} as Response);
 
 		await api();
@@ -64,7 +65,8 @@ describe("api", () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+			json: () =>
+				Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 		} as Response);
 
 		const searchParams = {
@@ -85,7 +87,8 @@ describe("api", () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+			json: () =>
+				Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 		} as Response);
 
 		const searchParams = {
@@ -136,7 +139,8 @@ describe("api", () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+			json: () =>
+				Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 		} as Response);
 
 		await api();
@@ -150,7 +154,8 @@ describe("api", () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+			json: () =>
+				Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 		} as Response);
 
 		await api({ searchParams: {} });
@@ -190,7 +195,8 @@ describe("api", () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+			json: () =>
+				Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 		} as Response);
 
 		await api({ searchParams: { normalbelopp: "300" } });
@@ -227,7 +233,8 @@ describe("api", () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				status: 200,
-				json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+				json: () =>
+					Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 			} as Response);
 
 		await api();
@@ -240,7 +247,8 @@ describe("api", () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+			json: () =>
+				Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 		} as Response);
 
 		await api({
@@ -261,7 +269,8 @@ describe("api", () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: () => Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
+			json: () =>
+				Promise.resolve({ results: [], offset: 0, limit: 100, total: 0 }),
 		} as Response);
 
 		await api();
