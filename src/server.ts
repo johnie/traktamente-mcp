@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { APP_NAME, APP_VERSION } from "@/config";
 import { api } from "@/lib/api";
+import { formatToolResponse, transformApiResponse } from "@/utils/response";
+import { TraktamenteRowSchema } from "@/utils/schemas";
 
 // Zod schemas for tool inputs and outputs
 const getTraktamenteInput = {
@@ -38,7 +41,7 @@ const getTraktamenteOutput = {
 	resultCount: z.number(),
 	offset: z.number(),
 	limit: z.number(),
-	results: z.array(z.any()),
+	results: z.array(TraktamenteRowSchema),
 	hasMore: z.boolean(),
 };
 
@@ -55,7 +58,7 @@ const getAllCountriesInput = {
 
 const getAllCountriesOutput = {
 	resultCount: z.number(),
-	results: z.array(z.any()),
+	results: z.array(TraktamenteRowSchema),
 	hasMore: z.boolean(),
 };
 
@@ -77,14 +80,14 @@ const searchTraktamenteInput = {
 
 const searchTraktamenteOutput = {
 	resultCount: z.number(),
-	results: z.array(z.any()),
+	results: z.array(TraktamenteRowSchema),
 };
 
 // Create and configure the MCP server
 export function createServer() {
 	const server = new McpServer({
-		name: "traktamente-mcp",
-		version: "1.0.0",
+		name: APP_NAME,
+		version: APP_VERSION,
 	});
 
 	// Register get_traktamente tool
@@ -98,42 +101,30 @@ export function createServer() {
 			outputSchema: getTraktamenteOutput,
 		},
 		async ({ land, år, landskod, normalbelopp, limit, offset }) => {
-			const data = await api({
-				searchParams: {
-					"land eller område": land,
-					år,
-					landskod,
-					normalbelopp,
-					_limit: limit,
-					_offset: offset,
-				},
-			});
-
-			// Transform API response to match output schema
-			const resultCount = data.results.length;
-			const actualLimit = data.limit || limit || 100;
-			const actualOffset = data.offset || offset || 0;
-			const hasMore = data.total
-				? actualOffset + resultCount < data.total
-				: resultCount === actualLimit;
-
-			const response = {
-				resultCount,
-				offset: actualOffset,
-				limit: actualLimit,
-				results: data.results,
-				hasMore,
-			};
-
-			return {
-				content: [
-					{
-						type: "text",
-						text: JSON.stringify(response, null, 2),
+			try {
+				const data = await api({
+					searchParams: {
+						"land eller område": land,
+						år,
+						landskod,
+						normalbelopp,
+						_limit: limit,
+						_offset: offset,
 					},
-				],
-				structuredContent: response,
-			};
+				});
+
+				const response = transformApiResponse(data, {
+					limit,
+					offset,
+					includeOffset: true,
+				});
+
+				return formatToolResponse(response);
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
+				throw new Error(`Failed to fetch traktamente rates: ${errorMessage}`);
+			}
 		},
 	);
 
@@ -148,35 +139,24 @@ export function createServer() {
 			outputSchema: getAllCountriesOutput,
 		},
 		async ({ år, limit }) => {
-			const data = await api({
-				searchParams: {
-					år,
-					_limit: limit || 200,
-				},
-			});
-
-			// Transform API response to match output schema
-			const resultCount = data.results.length;
-			const actualLimit = data.limit || limit || 200;
-			const hasMore = data.total
-				? (data.offset || 0) + resultCount < data.total
-				: resultCount === actualLimit;
-
-			const response = {
-				resultCount,
-				results: data.results,
-				hasMore,
-			};
-
-			return {
-				content: [
-					{
-						type: "text",
-						text: JSON.stringify(response, null, 2),
+			try {
+				const data = await api({
+					searchParams: {
+						år,
+						_limit: limit || 200,
 					},
-				],
-				structuredContent: response,
-			};
+				});
+
+				const response = transformApiResponse(data, {
+					limit: limit || 200,
+				});
+
+				return formatToolResponse(response);
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
+				throw new Error(`Failed to fetch countries: ${errorMessage}`);
+			}
 		},
 	);
 
@@ -191,29 +171,27 @@ export function createServer() {
 			outputSchema: searchTraktamenteOutput,
 		},
 		async ({ search, år, limit }) => {
-			const data = await api({
-				searchParams: {
-					"land eller område": search,
-					år,
-					_limit: limit || 50,
-				},
-			});
-
-			// Transform API response to match output schema
-			const response = {
-				resultCount: data.results.length,
-				results: data.results,
-			};
-
-			return {
-				content: [
-					{
-						type: "text",
-						text: JSON.stringify(response, null, 2),
+			try {
+				const data = await api({
+					searchParams: {
+						"land eller område": search,
+						år,
+						_limit: limit || 50,
 					},
-				],
-				structuredContent: response,
-			};
+				});
+
+				// For search, we don't include pagination metadata
+				const response = {
+					resultCount: data.results.length,
+					results: data.results,
+				};
+
+				return formatToolResponse(response);
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
+				throw new Error(`Failed to search traktamente: ${errorMessage}`);
+			}
 		},
 	);
 
