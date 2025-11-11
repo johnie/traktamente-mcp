@@ -1,53 +1,66 @@
+<<<<<<< HEAD
 import { MCP_TOOLS } from "@/core/mcp-tools";
 import { api } from "@/lib/api";
 import type { TraktamenteQueryParams } from "@/utils/schemas";
+=======
+import { StreamableHTTPTransport } from "@hono/mcp";
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { logger } from "hono/logger";
+import { createServer } from "@/server";
+import { MCPRequestSchema } from "@/utils/http-schemas";
+>>>>>>> 0ee0c53 (refactor: streamline MCP request handling by integrating Hono framework and removing legacy code)
 
-interface MCPRequest {
-	jsonrpc: "2.0";
-	id: string | number;
-	method: string;
-	params?: {
-		name?: string;
-		arguments?: Record<string, unknown>;
-	};
-}
+// Create MCP server instance
+const mcpServer = createServer();
 
-interface MCPResponse {
-	jsonrpc: "2.0";
-	id: string | number;
-	result?: unknown;
-	error?: {
-		code: number;
-		message: string;
-		data?: unknown;
-	};
-}
+// Create Hono app
+const app = new Hono();
 
-/**
- * Handle MCP protocol requests
- */
-async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
-	const { id, method, params } = request;
+// Middleware
+app.use("*", logger());
+app.use(
+	"*",
+	cors({
+		origin: "*",
+		allowMethods: ["POST", "GET", "OPTIONS"],
+		allowHeaders: ["Content-Type"],
+	}),
+);
 
-	try {
-		// Handle tools/list method
-		if (method === "tools/list") {
-			return {
-				jsonrpc: "2.0",
-				id,
-				result: {
-					tools: MCP_TOOLS,
-				},
-			};
-		}
+// Root endpoint - API info
+app.get("/", (c) => {
+	return c.json({
+		name: "Traktamente MCP Server",
+		version: "1.0.0",
+		description:
+			"MCP server for Swedish traktamente (per diem) rates from Skatteverket",
+		runtime: "Cloudflare Workers",
+		endpoints: {
+			health: "/health (GET)",
+			mcp: "/mcp (POST - JSON-RPC 2.0)",
+		},
+		repository: "https://github.com/johnie/traktamente-mcp",
+	});
+});
 
-		// Handle tools/call method
-		if (method === "tools/call") {
-			if (!params?.name) {
-				return {
+// Health check endpoint
+app.get("/health", (c) => {
+	return c.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// MCP endpoint - delegate to transport
+app.post(
+	"/mcp",
+	zValidator("json", MCPRequestSchema, (result, c) => {
+		if (!result.success) {
+			return c.json(
+				{
 					jsonrpc: "2.0",
-					id,
+					id: null,
 					error: {
+<<<<<<< HEAD
 						code: -32602,
 						message: "Invalid params: 'name' is required",
 					},
@@ -166,135 +179,36 @@ async function handleMCPRequest(request: MCPRequest): Promise<MCPResponse> {
 					serverInfo: {
 						name: "traktamente-mcp",
 						version: "1.0.0",
+=======
+						code: -32600,
+						message: "Invalid Request",
+						data: result.error.issues,
+>>>>>>> 0ee0c53 (refactor: streamline MCP request handling by integrating Hono framework and removing legacy code)
 					},
 				},
-			};
+				400,
+			);
 		}
+	}),
+	async (c) => {
+		try {
+			// Create transport for this request
+			const transport = new StreamableHTTPTransport();
+			await mcpServer.connect(transport);
 
-		// Unknown method
-		return {
-			jsonrpc: "2.0",
-			id,
-			error: {
-				code: -32601,
-				message: `Unknown method: ${method}`,
-			},
-		};
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error);
-		return {
-			jsonrpc: "2.0",
-			id,
-			error: {
-				code: -32603,
-				message: "Internal error",
-				data: errorMessage,
-			},
-		};
-	}
-}
+			// Handle request through @hono/mcp transport
+			return transport.handleRequest(c);
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			return c.json({ error: errorMessage }, 500);
+		}
+	},
+);
 
 /**
  * Cloudflare Workers fetch handler
  */
 export default {
-	async fetch(request: Request): Promise<Response> {
-		const url = new URL(request.url);
-
-		// CORS headers
-		const corsHeaders = {
-			"Access-Control-Allow-Origin": "*",
-			"Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type",
-		};
-
-		// Handle CORS preflight
-		if (request.method === "OPTIONS") {
-			return new Response(null, {
-				headers: corsHeaders,
-			});
-		}
-
-		// Health check endpoint
-		if (url.pathname === "/health") {
-			return Response.json(
-				{ status: "ok", timestamp: new Date().toISOString() },
-				{ headers: corsHeaders },
-			);
-		}
-
-		// MCP endpoint
-		if (url.pathname === "/mcp" && request.method === "POST") {
-			try {
-				const body = (await request.json()) as MCPRequest;
-
-				// Validate JSON-RPC 2.0 format
-				if (body.jsonrpc !== "2.0" || !body.method) {
-					return Response.json(
-						{
-							jsonrpc: "2.0",
-							id: body.id || null,
-							error: {
-								code: -32600,
-								message: "Invalid Request",
-							},
-						},
-						{
-							status: 400,
-							headers: { ...corsHeaders, "Content-Type": "application/json" },
-						},
-					);
-				}
-
-				const response = await handleMCPRequest(body);
-
-				return Response.json(response, {
-					headers: { ...corsHeaders, "Content-Type": "application/json" },
-				});
-			} catch (error) {
-				const errorMessage =
-					error instanceof Error ? error.message : String(error);
-				return Response.json(
-					{
-						jsonrpc: "2.0",
-						id: null,
-						error: {
-							code: -32700,
-							message: "Parse error",
-							data: errorMessage,
-						},
-					},
-					{
-						status: 400,
-						headers: { ...corsHeaders, "Content-Type": "application/json" },
-					},
-				);
-			}
-		}
-
-		// Root endpoint with API info
-		if (url.pathname === "/") {
-			return Response.json(
-				{
-					name: "Traktamente MCP Server",
-					version: "1.0.0",
-					description:
-						"MCP server for Swedish traktamente (per diem) rates from Skatteverket",
-					runtime: "Cloudflare Workers",
-					endpoints: {
-						health: "/health (GET)",
-						mcp: "/mcp (POST - JSON-RPC 2.0)",
-					},
-					repository: "https://github.com/johnie/traktamente-mcp",
-				},
-				{ headers: corsHeaders },
-			);
-		}
-
-		// Not found
-		return new Response("Not Found", {
-			status: 404,
-			headers: corsHeaders,
-		});
-	},
+	fetch: app.fetch,
 };
