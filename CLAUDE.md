@@ -38,11 +38,15 @@ bun run inspector
 # Run tests
 bun test
 
+# Run a single test file
+bun test src/lib/api.test.ts
+
 # Run tests in watch mode
 bun test:watch
 
 # Lint and format code
 bun run lint
+bun run lint:fix   # Auto-fix lint issues
 bun run format
 
 # Cloudflare Workers deployment
@@ -61,7 +65,8 @@ src/
 ├── index.ts              # Entry point - transport selection
 ├── server.ts             # Core MCP server setup and tool definitions
 ├── worker.ts             # Cloudflare Workers entry point
-├── constants.ts          # Constants (API URL)
+├── constants.ts          # Constants (API URL, CHARACTER_LIMIT, ResponseFormat)
+├── config.ts             # App name, version, description
 ├── lib/
 │   ├── api.ts            # Skatteverket API client
 │   └── api.test.ts       # API tests
@@ -70,7 +75,9 @@ src/
 │   └── http.ts           # HTTP transport (alternative)
 └── utils/
     ├── schemas.ts        # Zod schemas for API validation
-    └── http-schemas.ts   # Zod schemas for HTTP/MCP requests
+    ├── http-schemas.ts   # Zod schemas for HTTP/MCP requests
+    ├── response.ts       # Response transformation helpers
+    └── hono-app.ts       # Hono app factory with MCP endpoints
 ```
 
 ### Key Components
@@ -88,7 +95,7 @@ src/
 
 3. **API Client** (`src/lib/api.ts`):
    - `api()` function for Skatteverket API
-   - Uses `got` HTTP client with retry and timeout logic
+   - Custom `fetchWithRetry` wrapper with retry and timeout logic
    - Zod validation of API responses (via schemas)
    - Query parameter building with search params
 
@@ -111,24 +118,34 @@ src/
 
 ### MCP Tools
 
-The server exposes three tools via the Model Context Protocol:
+The server exposes three tools via the Model Context Protocol. All tools follow the MCP best practice of using a service prefix (`traktamente_`) to avoid naming conflicts with other MCP servers.
 
-1. **`get_traktamente`** - Main query tool with filters:
+1. **`traktamente_get_rates`** - Main query tool with filters:
    - `land` (string, optional): Country name (Swedish) or regex pattern
    - `år` (string, optional): Year (e.g., "2025")
    - `landskod` (string, optional): ISO country code (e.g., "SE", "NO")
    - `normalbelopp` (string, optional): Amount in SEK, supports regex
    - `limit` (number, optional): Max results (1-500, default: 100)
    - `offset` (number, optional): Pagination offset (default: 0)
+   - `response_format` ('json' | 'markdown', optional): Output format (default: 'json')
 
-2. **`get_all_countries`** - List all available countries:
+2. **`traktamente_list_countries`** - List all available countries:
    - `år` (string, optional): Filter by year
    - `limit` (number, optional): Max results (1-500, default: 200)
+   - `response_format` ('json' | 'markdown', optional): Output format (default: 'json')
 
-3. **`search_traktamente`** - Search countries by pattern:
+3. **`traktamente_search`** - Search countries by pattern:
    - `search` (string, required): Search term or regex pattern
    - `år` (string, optional): Filter by year
    - `limit` (number, optional): Max results (1-500, default: 50)
+   - `response_format` ('json' | 'markdown', optional): Output format (default: 'json')
+
+### Tool Features
+
+- **Annotations**: All tools include MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`)
+- **Response Formats**: Support both JSON (structured data) and Markdown (human-readable)
+- **Enhanced Pagination**: Responses include `total`, `count`, `hasMore`, and `nextOffset` fields
+- **Character Limit**: Large responses are automatically truncated at 25,000 characters with clear messaging
 
 ### Data Source
 
