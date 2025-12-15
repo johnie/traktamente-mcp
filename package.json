@@ -1,6 +1,6 @@
 {
   "name": "traktamente-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for Swedish traktamente (per diem) rates from Skatteverket",
   "type": "module",
   "private": false,
