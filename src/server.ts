@@ -1,87 +1,168 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { APP_NAME, APP_VERSION } from "@/config";
+import { ResponseFormat } from "@/constants";
 import { api } from "@/lib/api";
-import { formatToolResponse, transformApiResponse } from "@/utils/response";
+import {
+	formatSearchResponse,
+	formatToolResponse,
+	transformApiResponse,
+} from "@/utils/response";
 import { TraktamenteRowSchema } from "@/utils/schemas";
 
-// Zod schemas for tool inputs and outputs
-const getTraktamenteInput = {
-	land: z
-		.string()
-		.optional()
-		.describe(
-			'Country or region name (in Swedish, e.g., "Sverige", "Norge", "Tyskland"). Supports regex patterns.',
-		),
-	år: z.string().optional().describe('Year (e.g., "2025", "2024")'),
-	landskod: z
-		.string()
-		.optional()
-		.describe('ISO country code (e.g., "SE", "NO", "DE")'),
-	normalbelopp: z
-		.string()
-		.optional()
-		.describe("Standard amount in SEK. Supports regex for range queries."),
-	limit: z
-		.number()
-		.min(1)
-		.max(500)
-		.optional()
-		.default(100)
-		.describe("Maximum number of results to return (1-500, default: 100)"),
-	offset: z
-		.number()
-		.min(0)
-		.optional()
-		.default(0)
-		.describe("Offset for pagination (default: 0)"),
-};
+// Shared response format schema
+const responseFormatSchema = z
+	.nativeEnum(ResponseFormat)
+	.default(ResponseFormat.JSON)
+	.describe(
+		"Output format: 'json' for structured data (default), 'markdown' for human-readable text",
+	);
 
-const getTraktamenteOutput = {
-	resultCount: z.number(),
+// Input schemas with .strict() to forbid extra fields
+const getTraktamenteInputSchema = z
+	.object({
+		land: z
+			.string()
+			.optional()
+			.describe(
+				'Country or region name in Swedish (e.g., "Sverige", "Norge", "Tyskland"). Supports regex patterns for partial matching.',
+			),
+		år: z
+			.string()
+			.optional()
+			.describe('Year to filter by (e.g., "2025", "2024")'),
+		landskod: z
+			.string()
+			.optional()
+			.describe('ISO 3166-1 alpha-2 country code (e.g., "SE", "NO", "DE")'),
+		normalbelopp: z
+			.string()
+			.optional()
+			.describe(
+				'Standard daily allowance amount in SEK. Supports regex for range queries (e.g., "^3" for amounts starting with 3).',
+			),
+		limit: z
+			.number()
+			.int()
+			.min(1)
+			.max(500)
+			.default(100)
+			.describe("Maximum number of results to return (1-500, default: 100)"),
+		offset: z
+			.number()
+			.int()
+			.min(0)
+			.default(0)
+			.describe("Number of results to skip for pagination (default: 0)"),
+		response_format: responseFormatSchema,
+	})
+	.strict();
+
+const getTraktamenteOutputSchema = z.object({
+	total: z.number().describe("Total number of matching results"),
+	count: z.number().describe("Number of results in this response"),
+	offset: z.number().describe("Current pagination offset"),
+	limit: z.number().describe("Maximum results per page"),
+	results: z.array(TraktamenteRowSchema),
+	hasMore: z.boolean().describe("Whether more results are available"),
+	nextOffset: z
+		.number()
+		.optional()
+		.describe("Offset value for the next page (if hasMore is true)"),
+});
+
+const getAllCountriesInputSchema = z
+	.object({
+		år: z.string().optional().describe('Year to filter by (e.g., "2025")'),
+		limit: z
+			.number()
+			.int()
+			.min(1)
+			.max(500)
+			.default(200)
+			.describe("Maximum number of results to return (1-500, default: 200)"),
+		response_format: responseFormatSchema,
+	})
+	.strict();
+
+const getAllCountriesOutputSchema = z.object({
+	total: z.number(),
+	count: z.number(),
 	offset: z.number(),
 	limit: z.number(),
 	results: z.array(TraktamenteRowSchema),
 	hasMore: z.boolean(),
-};
+	nextOffset: z.number().optional(),
+});
 
-const getAllCountriesInput = {
-	år: z.string().optional().describe('Year to filter by (e.g., "2025")'),
-	limit: z
-		.number()
-		.min(1)
-		.max(500)
-		.optional()
-		.default(200)
-		.describe("Maximum number of results to return (1-500, default: 200)"),
-};
+const searchTraktamenteInputSchema = z
+	.object({
+		search: z
+			.string()
+			.min(1, "Search term is required")
+			.describe(
+				'Search term or regex pattern for country names (e.g., "Frank" to find France/Frankrike, "^S" for countries starting with S)',
+			),
+		år: z.string().optional().describe('Year to filter by (e.g., "2025")'),
+		limit: z
+			.number()
+			.int()
+			.min(1)
+			.max(500)
+			.default(50)
+			.describe("Maximum number of results (1-500, default: 50)"),
+		response_format: responseFormatSchema,
+	})
+	.strict();
 
-const getAllCountriesOutput = {
-	resultCount: z.number(),
+const searchTraktamenteOutputSchema = z.object({
+	searchTerm: z.string(),
+	count: z.number(),
 	results: z.array(TraktamenteRowSchema),
-	hasMore: z.boolean(),
-};
+});
 
-const searchTraktamenteInput = {
-	search: z
-		.string()
-		.describe(
-			'Search term or regex pattern (e.g., "Frank" to find France/Frankrike)',
-		),
-	år: z.string().optional().describe('Year to filter by (e.g., "2025")'),
-	limit: z
-		.number()
-		.min(1)
-		.max(500)
-		.optional()
-		.default(50)
-		.describe("Maximum number of results (1-500, default: 50)"),
-};
+/**
+ * Handle API errors with actionable messages
+ */
+function handleApiError(error: unknown, operation: string): never {
+	if (error instanceof Error) {
+		const message = error.message;
 
-const searchTraktamenteOutput = {
-	resultCount: z.number(),
-	results: z.array(TraktamenteRowSchema),
-};
+		// Network/timeout errors
+		if (message.includes("timeout") || message.includes("abort")) {
+			throw new Error(
+				`${operation} timed out. The Skatteverket API may be slow. Try again or reduce the limit parameter.`,
+			);
+		}
+
+		// HTTP errors
+		if (message.includes("HTTP error")) {
+			const statusMatch = message.match(/status:\s*(\d+)/);
+			const status = Number.parseInt(statusMatch?.[1] ?? "0", 10);
+
+			switch (status) {
+				case 404:
+					throw new Error(
+						`${operation} returned no data. Verify the query parameters are valid.`,
+					);
+				case 429:
+					throw new Error(
+						`${operation} was rate limited. Please wait before making more requests.`,
+					);
+				case 500:
+				case 502:
+				case 503:
+					throw new Error(
+						`${operation} failed due to a server error. The Skatteverket API may be temporarily unavailable. Try again later.`,
+					);
+				default:
+					throw new Error(`${operation} failed: ${message}`);
+			}
+		}
+	}
+
+	throw new Error(`${operation} failed: ${String(error)}`);
+}
 
 // Create and configure the MCP server
 export function createServer() {
@@ -90,17 +171,67 @@ export function createServer() {
 		version: APP_VERSION,
 	});
 
-	// Register get_traktamente tool
+	// Register traktamente_get_rates tool
 	server.registerTool(
-		"get_traktamente",
+		"traktamente_get_rates",
 		{
 			title: "Get Traktamente Rates",
-			description:
-				"Get traktamente (per diem) rates for countries. Query by country name, year, country code, or amount. Returns normalbelopp (standard amount) in SEK per day.",
-			inputSchema: getTraktamenteInput,
-			outputSchema: getTraktamenteOutput,
+			description: `Query Swedish traktamente (per diem) rates from Skatteverket's official database.
+
+This tool retrieves daily travel allowance rates for business trips to different countries. The rates are used by Swedish employers to calculate tax-free per diem payments.
+
+Args:
+  - land (string, optional): Country name in Swedish. Supports regex patterns.
+  - år (string, optional): Year to filter by (e.g., "2025")
+  - landskod (string, optional): ISO country code (e.g., "SE", "NO")
+  - normalbelopp (string, optional): Daily rate in SEK. Supports regex.
+  - limit (number, optional): Max results (1-500, default: 100)
+  - offset (number, optional): Pagination offset (default: 0)
+  - response_format ('json' | 'markdown'): Output format (default: 'json')
+
+Returns:
+  For JSON format:
+  {
+    "total": number,        // Total matching results
+    "count": number,        // Results in this response
+    "offset": number,       // Current offset
+    "limit": number,        // Page size
+    "results": [
+      {
+        "land eller område": string,  // Country name (Swedish)
+        "normalbelopp": string,       // Daily rate in SEK
+        "år": string,                 // Year
+        "landskod": string            // ISO country code
+      }
+    ],
+    "hasMore": boolean,     // More results available
+    "nextOffset": number    // Offset for next page (if hasMore)
+  }
+
+Examples:
+  - Get Sweden's rate: { "landskod": "SE", "år": "2025" }
+  - Get Nordic countries: { "land": "Norge|Danmark|Finland", "år": "2025" }
+  - Paginate results: { "limit": 20, "offset": 20 }
+
+Note: Country names are in Swedish (e.g., "Tyskland" for Germany, "Frankrike" for France).`,
+			inputSchema: getTraktamenteInputSchema.shape,
+			outputSchema: getTraktamenteOutputSchema.shape,
+			annotations: {
+				readOnlyHint: true,
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: true,
+			},
 		},
-		async ({ land, år, landskod, normalbelopp, limit, offset }) => {
+		async ({
+			land,
+			år,
+			landskod,
+			normalbelopp,
+			limit,
+			offset,
+			response_format,
+		}) => {
 			try {
 				const data = await api({
 					searchParams: {
@@ -113,84 +244,113 @@ export function createServer() {
 					},
 				});
 
-				const response = transformApiResponse(data, {
-					limit,
-					offset,
-					includeOffset: true,
-				});
-
-				return formatToolResponse(response);
+				const response = transformApiResponse(data, { limit, offset });
+				return formatToolResponse(response, response_format);
 			} catch (error) {
-				const errorMessage =
-					error instanceof Error ? error.message : String(error);
-				throw new Error(`Failed to fetch traktamente rates: ${errorMessage}`);
+				handleApiError(error, "Fetching traktamente rates");
 			}
 		},
 	);
 
-	// Register get_all_countries tool
+	// Register traktamente_list_countries tool
 	server.registerTool(
-		"get_all_countries",
+		"traktamente_list_countries",
 		{
-			title: "Get All Countries",
-			description:
-				"Get all available countries with their traktamente rates. Optionally filter by year.",
-			inputSchema: getAllCountriesInput,
-			outputSchema: getAllCountriesOutput,
+			title: "List All Countries",
+			description: `List all countries with available traktamente (per diem) rates.
+
+This tool retrieves a comprehensive list of all countries for which Skatteverket has published per diem rates. Use this when you need to see all available countries or when you're unsure of the exact country name.
+
+Args:
+  - år (string, optional): Filter by year (e.g., "2025")
+  - limit (number, optional): Max results (1-500, default: 200)
+  - response_format ('json' | 'markdown'): Output format (default: 'json')
+
+Returns:
+  Same structure as traktamente_get_rates with a list of all countries.
+
+Examples:
+  - List all countries for 2025: { "år": "2025" }
+  - Get first 50 countries: { "limit": 50 }
+
+Use traktamente_search for fuzzy matching when you don't know the exact Swedish name.`,
+			inputSchema: getAllCountriesInputSchema.shape,
+			outputSchema: getAllCountriesOutputSchema.shape,
+			annotations: {
+				readOnlyHint: true,
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: true,
+			},
 		},
-		async ({ år, limit }) => {
+		async ({ år, limit, response_format }) => {
 			try {
 				const data = await api({
 					searchParams: {
 						år,
-						_limit: limit || 200,
+						_limit: limit,
 					},
 				});
 
-				const response = transformApiResponse(data, {
-					limit: limit || 200,
-				});
-
-				return formatToolResponse(response);
+				const response = transformApiResponse(data, { limit, offset: 0 });
+				return formatToolResponse(response, response_format);
 			} catch (error) {
-				const errorMessage =
-					error instanceof Error ? error.message : String(error);
-				throw new Error(`Failed to fetch countries: ${errorMessage}`);
+				handleApiError(error, "Fetching country list");
 			}
 		},
 	);
 
-	// Register search_traktamente tool
+	// Register traktamente_search tool
 	server.registerTool(
-		"search_traktamente",
+		"traktamente_search",
 		{
 			title: "Search Traktamente",
-			description:
-				"Search for traktamente rates by country name using regex patterns. Useful for finding countries when you don't know the exact spelling.",
-			inputSchema: searchTraktamenteInput,
-			outputSchema: searchTraktamenteOutput,
+			description: `Search for traktamente rates by country name using pattern matching.
+
+This tool is ideal when you don't know the exact Swedish spelling of a country name. It supports regex patterns for flexible searching.
+
+Args:
+  - search (string, required): Search term or regex pattern
+  - år (string, optional): Filter by year (e.g., "2025")
+  - limit (number, optional): Max results (1-500, default: 50)
+  - response_format ('json' | 'markdown'): Output format (default: 'json')
+
+Returns:
+  {
+    "searchTerm": string,   // The search pattern used
+    "count": number,        // Number of matches
+    "results": [...]        // Matching traktamente records
+  }
+
+Examples:
+  - Find France: { "search": "Frank" } → finds "Frankrike"
+  - Find Germany: { "search": "Tysk" } → finds "Tyskland"
+  - Countries starting with S: { "search": "^S" }
+  - Case-insensitive: { "search": "[Ss]pan" } → finds "Spanien"
+
+Tip: Swedish country names often differ from English (Tyskland=Germany, Frankrike=France, Spanien=Spain, Schweiz=Switzerland).`,
+			inputSchema: searchTraktamenteInputSchema.shape,
+			outputSchema: searchTraktamenteOutputSchema.shape,
+			annotations: {
+				readOnlyHint: true,
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: true,
+			},
 		},
-		async ({ search, år, limit }) => {
+		async ({ search, år, limit, response_format }) => {
 			try {
 				const data = await api({
 					searchParams: {
 						"land eller område": search,
 						år,
-						_limit: limit || 50,
+						_limit: limit,
 					},
 				});
 
-				// For search, we don't include pagination metadata
-				const response = {
-					resultCount: data.results.length,
-					results: data.results,
-				};
-
-				return formatToolResponse(response);
+				return formatSearchResponse(data.results, search, response_format);
 			} catch (error) {
-				const errorMessage =
-					error instanceof Error ? error.message : String(error);
-				throw new Error(`Failed to search traktamente: ${errorMessage}`);
+				handleApiError(error, "Searching traktamente");
 			}
 		},
 	);
