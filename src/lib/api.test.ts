@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { TraktamenteResponse } from "@/utils/schemas";
 
-// Create a mock fetch function
-const mockFetch = mock(
+// Create a mock fetch function with proper typing
+const mockFetch = mock<(url: string, init?: RequestInit) => Promise<Response>>(
 	(): Promise<Response> =>
 		Promise.resolve({
 			ok: true,
@@ -11,8 +11,21 @@ const mockFetch = mock(
 		} as Response),
 );
 
-// Mock global fetch
-global.fetch = mockFetch;
+// Mock global fetch - use unknown cast to handle Bun's extended fetch type
+global.fetch = mockFetch as unknown as typeof fetch;
+
+// Helper to safely get mock call arguments
+function getCallUrl(callIndex: number): string {
+	const call = mockFetch.mock.calls[callIndex];
+	if (!call) throw new Error(`No call at index ${callIndex}`);
+	return call[0];
+}
+
+function getCallOptions(callIndex: number): RequestInit {
+	const call = mockFetch.mock.calls[callIndex];
+	if (!call || !call[1]) throw new Error(`No options at call index ${callIndex}`);
+	return call[1];
+}
 
 // Import after mocking
 const { api } = await import("./api");
@@ -40,7 +53,7 @@ describe("api", () => {
 		await api();
 
 		expect(mockFetch).toHaveBeenCalledTimes(1);
-		const callUrl = mockFetch.mock.calls[0][0] as string;
+		const callUrl = getCallUrl(0);
 		expect(callUrl).toContain(SKATTEVERKET_API_URL);
 	});
 
@@ -54,7 +67,7 @@ describe("api", () => {
 
 		await api();
 
-		const callOptions = mockFetch.mock.calls[0][1] as RequestInit;
+		const callOptions = getCallOptions(0);
 		expect(callOptions.headers).toMatchObject({
 			"user-agent": "SkatteverketAPI/1.0.0",
 			accept: "application/json",
@@ -77,7 +90,7 @@ describe("api", () => {
 		await api({ searchParams });
 
 		expect(mockFetch).toHaveBeenCalledTimes(1);
-		const callUrl = mockFetch.mock.calls[0][0] as string;
+		const callUrl = getCallUrl(0);
 		// URL encoding converts år to %C3%A5r
 		expect(callUrl).toContain("%C3%A5r=2025");
 		expect(callUrl).toContain("_limit=50");
@@ -100,7 +113,7 @@ describe("api", () => {
 
 		await api({ searchParams });
 
-		const callUrl = mockFetch.mock.calls[0][0] as string;
+		const callUrl = getCallUrl(0);
 		// URL encoding: spaces can be + or %20, å becomes %C3%A5
 		expect(callUrl).toMatch(/land(\+|%20)eller(\+|%20)omr%C3%A5de=Sverige/);
 		expect(callUrl).toContain("%C3%A5r=2025");
@@ -146,7 +159,7 @@ describe("api", () => {
 		await api();
 
 		expect(mockFetch).toHaveBeenCalledTimes(1);
-		const callUrl = mockFetch.mock.calls[0][0] as string;
+		const callUrl = getCallUrl(0);
 		expect(callUrl).toBe(SKATTEVERKET_API_URL);
 	});
 
@@ -161,7 +174,7 @@ describe("api", () => {
 		await api({ searchParams: {} });
 
 		expect(mockFetch).toHaveBeenCalledTimes(1);
-		const callUrl = mockFetch.mock.calls[0][0] as string;
+		const callUrl = getCallUrl(0);
 		expect(callUrl).toBe(SKATTEVERKET_API_URL);
 	});
 
@@ -187,7 +200,7 @@ describe("api", () => {
 
 		await api({ searchParams: { landskod: "SE" } });
 
-		const callUrl = mockFetch.mock.calls[0][0] as string;
+		const callUrl = getCallUrl(0);
 		expect(callUrl).toContain("landskod=SE");
 	});
 
@@ -201,7 +214,7 @@ describe("api", () => {
 
 		await api({ searchParams: { normalbelopp: "300" } });
 
-		const callUrl = mockFetch.mock.calls[0][0] as string;
+		const callUrl = getCallUrl(0);
 		expect(callUrl).toContain("normalbelopp=300");
 	});
 
@@ -259,7 +272,7 @@ describe("api", () => {
 			},
 		});
 
-		const callUrl = mockFetch.mock.calls[0][0] as string;
+		const callUrl = getCallUrl(0);
 		expect(callUrl).toContain("%C3%A5r=2025");
 		expect(callUrl).not.toContain("landskod");
 		expect(callUrl).not.toContain("_limit");
@@ -275,7 +288,7 @@ describe("api", () => {
 
 		await api();
 
-		const callOptions = mockFetch.mock.calls[0][1] as RequestInit;
+		const callOptions = getCallOptions(0);
 		expect(callOptions.signal).toBeInstanceOf(AbortSignal);
 	});
 });
