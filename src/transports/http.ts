@@ -1,9 +1,9 @@
 import { createServer } from "@/server";
 import { createHonoApp } from "@/utils/hono-app";
 
-export async function startHttpServer() {
+export function startHttpServer() {
 	const mcpServer = createServer();
-	const port = parseInt(process.env.PORT || "3000", 10);
+	const port = Number.parseInt(process.env.PORT || "3000", 10);
 	const host = process.env.HOST || "0.0.0.0";
 
 	// Create Hono app with shared configuration

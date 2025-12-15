@@ -11,7 +11,7 @@ async function fetchWithRetry(
 	url: string,
 	options: RequestInit = {},
 	retries = 2,
-	timeout = 30000,
+	timeout = 30_000
 ): Promise<Response> {
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), timeout);
