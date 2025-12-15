@@ -10,12 +10,15 @@ import {
 } from "@/utils/response";
 import { TraktamenteRowSchema } from "@/utils/schemas";
 
+// Regex for parsing HTTP status codes from error messages
+const HTTP_STATUS_REGEX = /status:\s*(\d+)/;
+
 // Shared response format schema
 const responseFormatSchema = z
-	.nativeEnum(ResponseFormat)
+	.enum([ResponseFormat.JSON, ResponseFormat.MARKDOWN])
 	.default(ResponseFormat.JSON)
 	.describe(
-		"Output format: 'json' for structured data (default), 'markdown' for human-readable text",
+		"Output format: 'json' for structured data (default), 'markdown' for human-readable text"
 	);
 
 // Input schemas with .strict() to forbid extra fields
@@ -25,7 +28,7 @@ const getTraktamenteInputSchema = z
 			.string()
 			.optional()
 			.describe(
-				'Country or region name in Swedish (e.g., "Sverige", "Norge", "Tyskland"). Supports regex patterns for partial matching.',
+				'Country or region name in Swedish (e.g., "Sverige", "Norge", "Tyskland"). Supports regex patterns for partial matching.'
 			),
 		år: z
 			.string()
@@ -39,7 +42,7 @@ const getTraktamenteInputSchema = z
 			.string()
 			.optional()
 			.describe(
-				'Standard daily allowance amount in SEK. Supports regex for range queries (e.g., "^3" for amounts starting with 3).',
+				'Standard daily allowance amount in SEK. Supports regex for range queries (e.g., "^3" for amounts starting with 3).'
 			),
 		limit: z
 			.number()
@@ -101,7 +104,7 @@ const searchTraktamenteInputSchema = z
 			.string()
 			.min(1, "Search term is required")
 			.describe(
-				'Search term or regex pattern for country names (e.g., "Frank" to find France/Frankrike, "^S" for countries starting with S)',
+				'Search term or regex pattern for country names (e.g., "Frank" to find France/Frankrike, "^S" for countries starting with S)'
 			),
 		år: z.string().optional().describe('Year to filter by (e.g., "2025")'),
 		limit: z
@@ -131,29 +134,29 @@ function handleApiError(error: unknown, operation: string): never {
 		// Network/timeout errors
 		if (message.includes("timeout") || message.includes("abort")) {
 			throw new Error(
-				`${operation} timed out. The Skatteverket API may be slow. Try again or reduce the limit parameter.`,
+				`${operation} timed out. The Skatteverket API may be slow. Try again or reduce the limit parameter.`
 			);
 		}
 
 		// HTTP errors
 		if (message.includes("HTTP error")) {
-			const statusMatch = message.match(/status:\s*(\d+)/);
+			const statusMatch = message.match(HTTP_STATUS_REGEX);
 			const status = Number.parseInt(statusMatch?.[1] ?? "0", 10);
 
 			switch (status) {
 				case 404:
 					throw new Error(
-						`${operation} returned no data. Verify the query parameters are valid.`,
+						`${operation} returned no data. Verify the query parameters are valid.`
 					);
 				case 429:
 					throw new Error(
-						`${operation} was rate limited. Please wait before making more requests.`,
+						`${operation} was rate limited. Please wait before making more requests.`
 					);
 				case 500:
 				case 502:
 				case 503:
 					throw new Error(
-						`${operation} failed due to a server error. The Skatteverket API may be temporarily unavailable. Try again later.`,
+						`${operation} failed due to a server error. The Skatteverket API may be temporarily unavailable. Try again later.`
 					);
 				default:
 					throw new Error(`${operation} failed: ${message}`);
@@ -249,7 +252,7 @@ Note: Country names are in Swedish (e.g., "Tyskland" for Germany, "Frankrike" fo
 			} catch (error) {
 				handleApiError(error, "Fetching traktamente rates");
 			}
-		},
+		}
 	);
 
 	// Register traktamente_list_countries tool
@@ -297,7 +300,7 @@ Use traktamente_search for fuzzy matching when you don't know the exact Swedish 
 			} catch (error) {
 				handleApiError(error, "Fetching country list");
 			}
-		},
+		}
 	);
 
 	// Register traktamente_search tool
@@ -352,7 +355,7 @@ Tip: Swedish country names often differ from English (Tyskland=Germany, Frankrik
 			} catch (error) {
 				handleApiError(error, "Searching traktamente");
 			}
-		},
+		}
 	);
 
 	return server;

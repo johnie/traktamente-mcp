@@ -1,7 +1,7 @@
 import { CHARACTER_LIMIT, ResponseFormat } from "@/constants";
 import type { TraktamenteResponse, TraktamenteRow } from "@/utils/schemas";
 
-interface PaginatedResponse {
+type PaginatedResponse = {
 	[key: string]: unknown;
 	total: number;
 	count: number;
@@ -10,7 +10,7 @@ interface PaginatedResponse {
 	results: TraktamenteRow[];
 	hasMore: boolean;
 	nextOffset?: number;
-}
+};
 
 /**
  * Transform API response to MCP tool response format with enhanced pagination metadata
@@ -20,7 +20,7 @@ export function transformApiResponse(
 	params: {
 		limit?: number;
 		offset?: number;
-	} = {},
+	} = {}
 ): PaginatedResponse {
 	const resultCount = data.results.length;
 	const actualLimit = data.limit || params.limit || 100;
@@ -78,7 +78,7 @@ export function formatAsMarkdown(response: PaginatedResponse): string {
 	if (response.hasMore && response.nextOffset !== undefined) {
 		lines.push("---");
 		lines.push(
-			`*More results available. Use offset=${response.nextOffset} to see next page.*`,
+			`*More results available. Use offset=${response.nextOffset} to see next page.*`
 		);
 	}
 
@@ -91,7 +91,7 @@ export function formatAsMarkdown(response: PaginatedResponse): string {
  */
 export function formatToolResponse<T extends PaginatedResponse>(
 	data: T,
-	format: ResponseFormat = ResponseFormat.JSON,
+	format: ResponseFormat = ResponseFormat.JSON
 ) {
 	let textContent: string;
 
@@ -137,7 +137,7 @@ export function formatToolResponse<T extends PaginatedResponse>(
 export function formatSearchResponse(
 	results: TraktamenteRow[],
 	searchTerm: string,
-	format: ResponseFormat = ResponseFormat.JSON,
+	format: ResponseFormat = ResponseFormat.JSON
 ) {
 	const response = {
 		searchTerm,

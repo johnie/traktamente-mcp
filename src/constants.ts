@@ -4,12 +4,15 @@ export const SKATTEVERKET_API_URL =
 /**
  * Maximum response size in characters to prevent overwhelming responses
  */
-export const CHARACTER_LIMIT = 25000;
+export const CHARACTER_LIMIT = 25_000;
 
 /**
  * Response format options for tool outputs
  */
-export enum ResponseFormat {
-	JSON = "json",
-	MARKDOWN = "markdown",
-}
+export const ResponseFormat = {
+	JSON: "json",
+	MARKDOWN: "markdown",
+} as const;
+
+export type ResponseFormat =
+	(typeof ResponseFormat)[keyof typeof ResponseFormat];

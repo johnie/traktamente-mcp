@@ -21,7 +21,7 @@ export function createHonoApp(mcpServer: McpServer) {
 			origin: "*",
 			allowMethods: ["POST", "GET", "OPTIONS"],
 			allowHeaders: ["Content-Type"],
-		}),
+		})
 	);
 
 	// Root endpoint - API info
@@ -59,12 +59,12 @@ export function createHonoApp(mcpServer: McpServer) {
 						jsonrpc: "2.0",
 						id: null,
 						error: {
-							code: -32600,
+							code: -32_600,
 							message: "Invalid Request",
 							data: result.error.issues,
 						},
 					},
-					400,
+					400
 				);
 			}
 		}),
@@ -81,7 +81,7 @@ export function createHonoApp(mcpServer: McpServer) {
 					error instanceof Error ? error.message : String(error);
 				return c.json({ error: errorMessage }, 500);
 			}
-		},
+		}
 	);
 
 	return app;
