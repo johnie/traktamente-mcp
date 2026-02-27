@@ -1,16 +1,22 @@
 import { CHARACTER_LIMIT, ResponseFormat } from "@/constants";
 import type { TraktamenteResponse, TraktamenteRow } from "@/utils/schemas";
 
-type PaginatedResponse = {
-	[key: string]: unknown;
-	total: number;
+interface PaginatedResponse {
 	count: number;
-	offset: number;
-	limit: number;
-	results: TraktamenteRow[];
 	hasMore: boolean;
+	limit: number;
 	nextOffset?: number;
-};
+	offset: number;
+	results: TraktamenteRow[];
+	total: number;
+	truncated?: boolean;
+	truncationMessage?: string;
+}
+
+interface ToolResponse<T> {
+	content: [{ type: "text"; text: string }];
+	structuredContent: T;
+}
 
 /**
  * Transform API response to MCP tool response format with enhanced pagination metadata
@@ -92,7 +98,7 @@ export function formatAsMarkdown(response: PaginatedResponse): string {
 export function formatToolResponse<T extends PaginatedResponse>(
 	data: T,
 	format: ResponseFormat = ResponseFormat.JSON
-) {
+): ToolResponse<T> {
 	let textContent: string;
 
 	if (format === ResponseFormat.MARKDOWN) {
@@ -134,11 +140,17 @@ export function formatToolResponse<T extends PaginatedResponse>(
 /**
  * Format a simple search response (without full pagination)
  */
+interface SearchResponse {
+	count: number;
+	results: TraktamenteRow[];
+	searchTerm: string;
+}
+
 export function formatSearchResponse(
 	results: TraktamenteRow[],
 	searchTerm: string,
 	format: ResponseFormat = ResponseFormat.JSON
-) {
+): ToolResponse<SearchResponse> {
 	const response = {
 		searchTerm,
 		count: results.length,

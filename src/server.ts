@@ -1,25 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { APP_NAME, APP_VERSION } from "@/config";
-import { ResponseFormat } from "@/constants";
 import { api } from "@/lib/api";
 import {
 	formatSearchResponse,
 	formatToolResponse,
 	transformApiResponse,
 } from "@/utils/response";
-import { TraktamenteRowSchema } from "@/utils/schemas";
+import { responseFormatSchema, TraktamenteRowSchema } from "@/utils/schemas";
 
 // Regex for parsing HTTP status codes from error messages
 const HTTP_STATUS_REGEX = /status:\s*(\d+)/;
-
-// Shared response format schema
-const responseFormatSchema = z
-	.enum([ResponseFormat.JSON, ResponseFormat.MARKDOWN])
-	.default(ResponseFormat.JSON)
-	.describe(
-		"Output format: 'json' for structured data (default), 'markdown' for human-readable text"
-	);
 
 // Input schemas with .strict() to forbid extra fields
 const getTraktamenteInputSchema = z
@@ -217,8 +208,8 @@ Examples:
   - Paginate results: { "limit": 20, "offset": 20 }
 
 Note: Country names are in Swedish (e.g., "Tyskland" for Germany, "Frankrike" for France).`,
-			inputSchema: getTraktamenteInputSchema.shape,
-			outputSchema: getTraktamenteOutputSchema.shape,
+			inputSchema: getTraktamenteInputSchema,
+			outputSchema: getTraktamenteOutputSchema,
 			annotations: {
 				readOnlyHint: true,
 				destructiveHint: false,
@@ -277,8 +268,8 @@ Examples:
   - Get first 50 countries: { "limit": 50 }
 
 Use traktamente_search for fuzzy matching when you don't know the exact Swedish name.`,
-			inputSchema: getAllCountriesInputSchema.shape,
-			outputSchema: getAllCountriesOutputSchema.shape,
+			inputSchema: getAllCountriesInputSchema,
+			outputSchema: getAllCountriesOutputSchema,
 			annotations: {
 				readOnlyHint: true,
 				destructiveHint: false,
@@ -332,8 +323,8 @@ Examples:
   - Case-insensitive: { "search": "[Ss]pan" } → finds "Spanien"
 
 Tip: Swedish country names often differ from English (Tyskland=Germany, Frankrike=France, Spanien=Spain, Schweiz=Switzerland).`,
-			inputSchema: searchTraktamenteInputSchema.shape,
-			outputSchema: searchTraktamenteOutputSchema.shape,
+			inputSchema: searchTraktamenteInputSchema,
+			outputSchema: searchTraktamenteOutputSchema,
 			annotations: {
 				readOnlyHint: true,
 				destructiveHint: false,
