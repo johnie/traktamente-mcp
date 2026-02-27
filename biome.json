@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!wrangler.jsonc"]
+    "includes": ["!wrangler.jsonc"]
   },
   "formatter": {
     "enabled": true,
