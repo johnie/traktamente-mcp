@@ -1,4 +1,15 @@
 import { z } from "zod";
+import { ResponseFormat } from "@/constants";
+
+/**
+ * Shared response format schema for tool inputs
+ */
+export const responseFormatSchema = z
+	.enum([ResponseFormat.JSON, ResponseFormat.MARKDOWN])
+	.default(ResponseFormat.JSON)
+	.describe(
+		"Output format: 'json' for structured data (default), 'markdown' for human-readable text"
+	);
 
 /**
  * Query parameters schema for the dataset endpoint
